@@ -41,7 +41,11 @@
   .result-subtitle { font-size: 1em; color: #718096; }
   .gesamtscore { font-size: 3.5em; font-weight: 800; margin: 20px 0 4px; }
   .score-label { font-size: 0.9em; color: #718096; }
-  .dimensionen { margin: 36px 0; }
+  .radar-section { margin: 36px 0 28px; text-align: center; }
+  .radar-section h3 { font-size: 1.1em; font-weight: 700; color: #2d3748; margin-bottom: 20px; text-align: left; }
+  .radar-wrap { display: flex; justify-content: center; align-items: center; }
+  canvas#radarChart { max-width: 100%; }
+  .dimensionen { margin: 28px 0; }
   .dimensionen h3 { font-size: 1.1em; font-weight: 700; color: #2d3748; margin-bottom: 16px; }
   .dim-row { margin-bottom: 16px; }
   .dim-label { display: flex; justify-content: space-between; margin-bottom: 6px; font-size: 0.9em; }
@@ -54,7 +58,7 @@
   .empfehlungen ul { list-style: none; padding: 0; }
   .empfehlungen li { padding: 8px 0 8px 28px; position: relative; font-size: 0.95em; color: #4a5568; border-bottom: 1px solid #e2e8f0; }
   .empfehlungen li:last-child { border-bottom: none; }
-  .empfehlungen li::before { content: "→"; position: absolute; left: 0; color: #3182ce; font-weight: 700; }
+  .empfehlungen li::before { content: "\2192"; position: absolute; left: 0; color: #3182ce; font-weight: 700; }
   .btn-restart { display: block; margin: 32px auto 0; background: #1a365d; color: white; padding: 14px 36px; }
   .btn-restart:hover { background: #2b6cb0; }
   .welcome { text-align: center; padding: 20px 0 30px; }
@@ -256,6 +260,115 @@ function getStufe(score) {
   return stufen.find(s => score >= s.min && score <= s.max) || stufen[stufen.length - 1];
 }
 
+function zeichneRadar(dimScores) {
+  const canvas = document.getElementById('radarChart');
+  if (!canvas) return;
+  const ctx = canvas.getContext('2d');
+  const W = canvas.width;
+  const H = canvas.height;
+  const cx = W / 2;
+  const cy = H / 2;
+  const R = Math.min(W, H) / 2 - 60;
+  const labels = Object.keys(dimScores);
+  const werte = labels.map(k => dimScores[k]);
+  const n = labels.length;
+  const winkel = labels.map((_, i) => (Math.PI * 2 * i / n) - Math.PI / 2);
+  const farben = ['#63b3ed','#f6ad55','#68d391','#fc8181','#b794f4'];
+
+  ctx.clearRect(0, 0, W, H);
+
+  // Hintergrund-Gitter
+  for (let level = 1; level <= 5; level++) {
+    const r = (R * level) / 5;
+    ctx.beginPath();
+    winkel.forEach((a, i) => {
+      const x = cx + r * Math.cos(a);
+      const y = cy + r * Math.sin(a);
+      i === 0 ? ctx.moveTo(x, y) : ctx.lineTo(x, y);
+    });
+    ctx.closePath();
+    ctx.strokeStyle = level === 5 ? '#cbd5e0' : '#e2e8f0';
+    ctx.lineWidth = level === 5 ? 1.5 : 1;
+    ctx.stroke();
+    // Level-Beschriftung
+    ctx.fillStyle = '#a0aec0';
+    ctx.font = '11px Segoe UI, Arial, sans-serif';
+    ctx.textAlign = 'center';
+    ctx.fillText(level, cx + 6, cy - r + 4);
+  }
+
+  // Achsen
+  winkel.forEach(a => {
+    ctx.beginPath();
+    ctx.moveTo(cx, cy);
+    ctx.lineTo(cx + R * Math.cos(a), cy + R * Math.sin(a));
+    ctx.strokeStyle = '#e2e8f0';
+    ctx.lineWidth = 1;
+    ctx.stroke();
+  });
+
+  // Zielbereich (Stufe 5 = ideal) – dezent
+  ctx.beginPath();
+  winkel.forEach((a, i) => {
+    const x = cx + R * Math.cos(a);
+    const y = cy + R * Math.sin(a);
+    i === 0 ? ctx.moveTo(x, y) : ctx.lineTo(x, y);
+  });
+  ctx.closePath();
+  ctx.fillStyle = 'rgba(99,179,237,0.06)';
+  ctx.fill();
+
+  // Datenfläche
+  ctx.beginPath();
+  winkel.forEach((a, i) => {
+    const r = (R * werte[i]) / 5;
+    const x = cx + r * Math.cos(a);
+    const y = cy + r * Math.sin(a);
+    i === 0 ? ctx.moveTo(x, y) : ctx.lineTo(x, y);
+  });
+  ctx.closePath();
+  ctx.fillStyle = 'rgba(49,130,206,0.18)';
+  ctx.fill();
+  ctx.strokeStyle = '#3182ce';
+  ctx.lineWidth = 2.5;
+  ctx.stroke();
+
+  // Punkte auf den Achsen
+  winkel.forEach((a, i) => {
+    const r = (R * werte[i]) / 5;
+    const x = cx + r * Math.cos(a);
+    const y = cy + r * Math.sin(a);
+    ctx.beginPath();
+    ctx.arc(x, y, 6, 0, Math.PI * 2);
+    ctx.fillStyle = farben[i % farben.length];
+    ctx.fill();
+    ctx.strokeStyle = 'white';
+    ctx.lineWidth = 2;
+    ctx.stroke();
+    // Wert-Label am Punkt
+    ctx.fillStyle = '#2d3748';
+    ctx.font = 'bold 13px Segoe UI, Arial, sans-serif';
+    ctx.textAlign = 'center';
+    const lx = x + (x - cx) * 0.22;
+    const ly = y + (y - cy) * 0.22 + 4;
+    ctx.fillText(werte[i].toFixed(1), lx, ly);
+  });
+
+  // Achsenbeschriftungen
+  winkel.forEach((a, i) => {
+    const labelR = R + 42;
+    const lx = cx + labelR * Math.cos(a);
+    const ly = cy + labelR * Math.sin(a);
+    ctx.font = 'bold 13px Segoe UI, Arial, sans-serif';
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    // Farbe: grün wenn >= 4, orange wenn >= 2.5, rot wenn < 2.5
+    const v = werte[i];
+    ctx.fillStyle = v >= 4 ? '#276749' : v >= 2.5 ? '#c05621' : '#c53030';
+    ctx.fillText(labels[i], lx, ly);
+  });
+}
+
 function zeigeErgebnis() {
   document.getElementById('quiz').style.display = 'none';
   const { dimScores, gesamt } = berechneScores();
@@ -270,6 +383,12 @@ function zeigeErgebnis() {
       <div class="gesamtscore" style="color: var(--c, #2d3748)">${gesamtScore.toFixed(1)}<span style="font-size:0.45em; font-weight:400"> / 5.0</span></div>
       <div class="score-label">Ihr KI-Reifegrad-Score</div>
       <div style="margin-top:12px; font-size:1em; color:#4a5568; max-width:520px; margin-left:auto; margin-right:auto; line-height:1.6">${stufe.beschreibung}</div>
+    </div>
+    <div class="radar-section">
+      <h3>📡 Stärken & Lücken im Überblick:</h3>
+      <div class="radar-wrap">
+        <canvas id="radarChart" width="420" height="420"></canvas>
+      </div>
     </div>
     <div class="dimensionen">
       <h3>Ergebnis nach Dimension:</h3>
@@ -291,6 +410,7 @@ function zeigeErgebnis() {
   `;
   result.classList.add('show');
   window.scrollTo({ top: 0, behavior: 'smooth' });
+  setTimeout(() => zeichneRadar(dimScores), 100);
 }
 
 function neustarten() {
