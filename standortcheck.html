@@ -1,0 +1,305 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>KI-Standortcheck | Reifegrad-Selbstbewertung</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: 'Segoe UI', Arial, sans-serif; background: #f0f4f8; color: #1a202c; min-height: 100vh; }
+  .header { background: linear-gradient(135deg, #1a365d 0%, #2b6cb0 100%); color: white; padding: 40px 20px; text-align: center; }
+  .header h1 { font-size: 2.2em; font-weight: 700; margin-bottom: 10px; }
+  .header p { font-size: 1.1em; opacity: 0.85; max-width: 600px; margin: 0 auto; }
+  .container { max-width: 800px; margin: 0 auto; padding: 30px 20px; }
+  .progress-bar { background: #e2e8f0; border-radius: 999px; height: 8px; margin-bottom: 8px; overflow: hidden; }
+  .progress-fill { height: 100%; background: linear-gradient(90deg, #3182ce, #63b3ed); border-radius: 999px; transition: width 0.5s ease; }
+  .progress-label { font-size: 0.85em; color: #718096; text-align: right; margin-bottom: 30px; }
+  .question-card { background: white; border-radius: 16px; padding: 32px; margin-bottom: 24px; box-shadow: 0 2px 12px rgba(0,0,0,0.08); display: none; }
+  .question-card.active { display: block; animation: fadeIn 0.4s ease; }
+  @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+  .dimension-badge { display: inline-block; background: #ebf8ff; color: #2b6cb0; border-radius: 999px; padding: 4px 14px; font-size: 0.78em; font-weight: 600; text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 14px; }
+  .question-text { font-size: 1.2em; font-weight: 600; color: #2d3748; margin-bottom: 24px; line-height: 1.5; }
+  .options { display: flex; flex-direction: column; gap: 12px; }
+  .option { display: flex; align-items: flex-start; gap: 14px; padding: 16px 20px; border: 2px solid #e2e8f0; border-radius: 12px; cursor: pointer; transition: all 0.2s; background: #fafafa; }
+  .option:hover { border-color: #3182ce; background: #ebf8ff; }
+  .option.selected { border-color: #3182ce; background: #ebf8ff; }
+  .option-score { width: 28px; height: 28px; border-radius: 50%; background: #e2e8f0; display: flex; align-items: center; justify-content: center; font-size: 0.8em; font-weight: 700; flex-shrink: 0; color: #4a5568; }
+  .option.selected .option-score { background: #3182ce; color: white; }
+  .option-text { font-size: 0.95em; color: #4a5568; line-height: 1.5; }
+  .nav-buttons { display: flex; justify-content: space-between; margin-top: 28px; gap: 12px; }
+  .btn { padding: 12px 28px; border-radius: 10px; border: none; cursor: pointer; font-size: 1em; font-weight: 600; transition: all 0.2s; }
+  .btn-back { background: #e2e8f0; color: #4a5568; }
+  .btn-back:hover { background: #cbd5e0; }
+  .btn-next { background: #3182ce; color: white; margin-left: auto; }
+  .btn-next:hover { background: #2c5282; }
+  .btn-next:disabled { background: #a0aec0; cursor: not-allowed; }
+  .result { display: none; background: white; border-radius: 16px; padding: 40px; box-shadow: 0 4px 20px rgba(0,0,0,0.1); }
+  .result.show { display: block; animation: fadeIn 0.6s ease; }
+  .result-header { text-align: center; margin-bottom: 40px; }
+  .stufe-badge { display: inline-block; padding: 16px 36px; border-radius: 999px; font-size: 1.5em; font-weight: 700; margin-bottom: 16px; }
+  .result-title { font-size: 1.6em; font-weight: 700; color: #1a202c; margin-bottom: 8px; }
+  .result-subtitle { font-size: 1em; color: #718096; }
+  .gesamtscore { font-size: 3.5em; font-weight: 800; margin: 20px 0 4px; }
+  .score-label { font-size: 0.9em; color: #718096; }
+  .dimensionen { margin: 36px 0; }
+  .dimensionen h3 { font-size: 1.1em; font-weight: 700; color: #2d3748; margin-bottom: 16px; }
+  .dim-row { margin-bottom: 16px; }
+  .dim-label { display: flex; justify-content: space-between; margin-bottom: 6px; font-size: 0.9em; }
+  .dim-name { color: #4a5568; font-weight: 600; }
+  .dim-score { color: #2d3748; font-weight: 700; }
+  .dim-bar { background: #e2e8f0; border-radius: 999px; height: 10px; overflow: hidden; }
+  .dim-fill { height: 100%; border-radius: 999px; transition: width 1s ease; }
+  .empfehlungen { background: #f7fafc; border-radius: 12px; padding: 24px; margin-top: 28px; }
+  .empfehlungen h3 { font-size: 1.05em; font-weight: 700; color: #2d3748; margin-bottom: 14px; }
+  .empfehlungen ul { list-style: none; padding: 0; }
+  .empfehlungen li { padding: 8px 0 8px 28px; position: relative; font-size: 0.95em; color: #4a5568; border-bottom: 1px solid #e2e8f0; }
+  .empfehlungen li:last-child { border-bottom: none; }
+  .empfehlungen li::before { content: "→"; position: absolute; left: 0; color: #3182ce; font-weight: 700; }
+  .btn-restart { display: block; margin: 32px auto 0; background: #1a365d; color: white; padding: 14px 36px; }
+  .btn-restart:hover { background: #2b6cb0; }
+  .welcome { text-align: center; padding: 20px 0 30px; }
+  .welcome h2 { font-size: 1.4em; color: #2d3748; margin-bottom: 12px; }
+  .welcome p { color: #718096; font-size: 0.95em; max-width: 560px; margin: 0 auto 24px; line-height: 1.7; }
+  .btn-start { background: linear-gradient(135deg, #1a365d, #2b6cb0); color: white; font-size: 1.1em; padding: 16px 44px; border-radius: 12px; }
+  .btn-start:hover { opacity: 0.92; transform: translateY(-1px); }
+  .stufe1 { background: #fff5f5; color: #c53030; }
+  .stufe2 { background: #fffaf0; color: #c05621; }
+  .stufe3 { background: #fffff0; color: #b7791f; }
+  .stufe4 { background: #f0fff4; color: #276749; }
+  .stufe5 { background: #ebf8ff; color: #2b6cb0; }
+  .bar1 { background: #fc8181; }
+  .bar2 { background: #f6ad55; }
+  .bar3 { background: #f6e05e; }
+  .bar4 { background: #68d391; }
+  .bar5 { background: #63b3ed; }
+</style>
+</head>
+<body>
+<div class="header">
+  <h1>🎯 KI-Standortcheck</h1>
+  <p>Ermitteln Sie in 5 Minuten den KI-Reifegrad Ihres Unternehmens</p>
+</div>
+<div class="container">
+  <div class="welcome" id="welcome">
+    <br>
+    <h2>Wo steht Ihr Unternehmen bei KI?</h2>
+    <p>Beantworten Sie 10 kurze Fragen zu 5 Dimensionen. Danach sehen Sie sofort, auf welcher der 5 Reifegradstufen sich Ihr Unternehmen befindet — inkl. konkreter Handlungsempfehlungen.</p>
+    <button class="btn btn-start" onclick="startCheck()">Jetzt starten →</button>
+  </div>
+  <div id="quiz" style="display:none">
+    <div class="progress-bar"><div class="progress-fill" id="progressFill" style="width:0%"></div></div>
+    <div class="progress-label" id="progressLabel">Frage 1 von 10</div>
+    <div id="questionCards"></div>
+  </div>
+  <div class="result" id="result"></div>
+</div>
+<script>
+const fragen = [
+  { dim: "Datenverfügbarkeit & -qualität", dimKurz: "Daten", frage: "Wie würden Sie die Datenlage in Ihrem Unternehmen beschreiben?", optionen: [
+    {text: "Daten sind kaum strukturiert, meist in Papierform oder isolierten Excel-Dateien", score: 1},
+    {text: "Einige Daten sind digital erfasst, aber verteilt über verschiedene Systeme ohne zentrale Übersicht", score: 2},
+    {text: "Wir haben erste Datenpipelines und eine Datenbankstruktur, aber Qualität schwankt", score: 3},
+    {text: "Daten sind größtenteils strukturiert, zugänglich und es gibt ein Datenmanagement-Team", score: 4},
+    {text: "Wir haben eine vollständige Data Platform, Data Governance und hohe Datenqualität unternehmensweit", score: 5}
+  ]},
+  { dim: "Datenverfügbarkeit & -qualität", dimKurz: "Daten", frage: "Wie wird mit Daten in Ihrem Unternehmen strategisch umgegangen?", optionen: [
+    {text: "Keine bewusste Datenstrategie vorhanden", score: 1},
+    {text: "Daten werden reaktiv genutzt — wenn sie gebraucht werden, sucht man sie zusammen", score: 2},
+    {text: "Es gibt erste Bestrebungen für eine Datenstrategie, aber noch kein formales Konzept", score: 3},
+    {text: "Eine Datenstrategie existiert und wird aktiv umgesetzt", score: 4},
+    {text: "Datengetriebene Entscheidungskultur ist fest verankert — Daten sind Kernressource", score: 5}
+  ]},
+  { dim: "Technische Infrastruktur", dimKurz: "Infrastruktur", frage: "Wie ist die IT-Infrastruktur für KI-Anwendungen aufgestellt?", optionen: [
+    {text: "Hauptsächlich On-Premise, keine Cloud-Nutzung, ältere Systeme", score: 1},
+    {text: "Erste Cloud-Dienste werden genutzt (z.B. Office 365), aber keine ML-Infrastruktur", score: 2},
+    {text: "Cloud-Infrastruktur vorhanden, erste Experimente mit ML-Tools oder APIs", score: 3},
+    {text: "Dedizierte ML-Plattform (z.B. Azure ML, AWS SageMaker), APIs und CI/CD vorhanden", score: 4},
+    {text: "Vollständige MLOps-Infrastruktur, DataOps, Echtzeitverarbeitung und skalierbare KI-Plattform", score: 5}
+  ]},
+  { dim: "Technische Infrastruktur", dimKurz: "Infrastruktur", frage: "Werden bereits KI-Tools oder KI-gestützte Software im Unternehmen eingesetzt?", optionen: [
+    {text: "Nein, KI-Tools werden nicht genutzt", score: 1},
+    {text: "Einzelne Mitarbeitende nutzen Tools wie ChatGPT privat oder informell", score: 2},
+    {text: "KI-Tools werden in einzelnen Abteilungen getestet (z.B. Copilot, automatisierte Berichte)", score: 3},
+    {text: "KI ist in mehrere Geschäftsprozesse integriert und produktiv im Einsatz", score: 4},
+    {text: "KI durchdringt alle Kernprozesse und schafft messbare Wettbewerbsvorteile", score: 5}
+  ]},
+  { dim: "KI-Kompetenz (intern)", dimKurz: "Kompetenz", frage: "Wie ist das KI-Know-how in Ihrem Unternehmen ausgeprägt?", optionen: [
+    {text: "Kein spezifisches KI-Wissen vorhanden, Thema ist unbekannt", score: 1},
+    {text: "Grundlegendes Bewusstsein bei einigen Personen, kein strukturiertes Wissen", score: 2},
+    {text: "Einzelne KI-Enthusiasten oder ein kleines Team mit Kenntnissen vorhanden", score: 3},
+    {text: "Dediziertes KI-Team (Data Scientists, ML Engineers), KI-Literacy-Programm läuft", score: 4},
+    {text: "Umfassendes KI-Kompetenzzentrum (CoE), unternehmensweite AI Literacy", score: 5}
+  ]},
+  { dim: "KI-Kompetenz (intern)", dimKurz: "Kompetenz", frage: "Wie stark ist KI als Thema in Ihrer Weiterbildungsstrategie verankert?", optionen: [
+    {text: "KI ist kein Thema in der Personalentwicklung", score: 1},
+    {text: "Vereinzelte Mitarbeiter bilden sich auf eigene Initiative weiter", score: 2},
+    {text: "Erste KI-Schulungen werden angeboten, aber noch nicht systematisch", score: 3},
+    {text: "Strukturiertes KI-Weiterbildungsprogramm für relevante Rollen ist etabliert", score: 4},
+    {text: "KI-Kompetenz ist Teil aller Karrierepfade und Onboarding-Programme", score: 5}
+  ]},
+  { dim: "Prozessintegration", dimKurz: "Prozesse", frage: "Wie gut sind Ihre Geschäftsprozesse für KI-Automatisierung vorbereitet?", optionen: [
+    {text: "Prozesse sind kaum dokumentiert, stark personenabhängig", score: 1},
+    {text: "Wichtige Prozesse sind teilweise dokumentiert, aber noch nicht standardisiert", score: 2},
+    {text: "Kernprozesse sind dokumentiert und es laufen erste Automatisierungsprojekte", score: 3},
+    {text: "Prozesse sind standardisiert, digitalisiert und Automatisierung ist etabliert", score: 4},
+    {text: "Prozesse sind durchgängig KI-optimiert und kontinuierlich datengetrieben verbessert", score: 5}
+  ]},
+  { dim: "Prozessintegration", dimKurz: "Prozesse", frage: "Wie werden KI-Projekte in Ihrem Unternehmen umgesetzt?", optionen: [
+    {text: "Es gibt keine KI-Projekte", score: 1},
+    {text: "Erste informelle Experimente ohne klare Struktur oder Budget", score: 2},
+    {text: "Erste strukturierte Pilotprojekte mit definierten Zielen laufen", score: 3},
+    {text: "KI-Projekte werden nach einem Standardprozess (Pilot → MVP → Rollout) umgesetzt", score: 4},
+    {text: "KI-Innovation ist ein kontinuierlicher, institutionalisierter Prozess mit eigenem Budget", score: 5}
+  ]},
+  { dim: "Führung & Kultur", dimKurz: "Führung", frage: "Wie ist die Haltung des Managements gegenüber KI?", optionen: [
+    {text: "KI ist kein Thema auf Führungsebene", score: 1},
+    {text: "Einzelne Führungskräfte interessieren sich, aber keine strategische Priorität", score: 2},
+    {text: "KI steht auf der Agenda, erste Budgets werden bereitgestellt", score: 3},
+    {text: "KI ist Teil der Unternehmensstrategie mit klarer Verantwortlichkeit auf C-Level", score: 4},
+    {text: "Führung treibt KI-Transformation aktiv voran, KI ist zentrales Geschäftsmodell-Element", score: 5}
+  ]},
+  { dim: "Führung & Kultur", dimKurz: "Führung", frage: "Wie offen ist die Unternehmenskultur gegenüber datengetriebenen Entscheidungen und Veränderung?", optionen: [
+    {text: "Entscheidungen basieren hauptsächlich auf Erfahrung und Intuition, Änderungen werden gemieden", score: 1},
+    {text: "Daten werden manchmal hinzugezogen, aber Kultur ist veränderungsresistent", score: 2},
+    {text: "Wachsende Offenheit für datengestützte Entscheidungen, Fehlerkultur entwickelt sich", score: 3},
+    {text: "Datengestützte Entscheidungskultur ist etabliert, Change Management ist Standard", score: 4},
+    {text: "Kontinuierliche Innovation und datengetriebene Agilität sind fester Kulturbestandteil", score: 5}
+  ]}
+];
+
+const stufen = [
+  { min: 1.0, max: 1.8, name: "Stufe 1: Awareness", untertitel: "Bewusstsein", klasse: "stufe1", bar: "bar1",
+    beschreibung: "Ihr Unternehmen steht am Anfang der KI-Reise. KI ist noch kein strategisches Thema und es fehlt an Datenbasis und Erfahrung.",
+    empfehlungen: ["Executive KI-Workshop durchführen (1–2 Tage)", "Datenbestandsaufnahme starten", "2–3 konkrete Use Cases identifizieren", "KI-Grundlagen-Schulung für Schlüsselpersonen", "Externe KI-Beratung für Orientierung einbeziehen"] },
+  { min: 1.8, max: 2.6, name: "Stufe 2: Exploration", untertitel: "Erkundung", klasse: "stufe2", bar: "bar2",
+    beschreibung: "Erste KI-Experimente laufen, aber noch unstrukturiert. Der Grundstein wird gelegt — jetzt gilt es, gezielt zu priorisieren.",
+    empfehlungen: ["Use-Case-Assessment durchführen und Top-3 Prioritäten festlegen", "Datenqualitäts-Audit starten", "Daten-Roadmap erarbeiten", "KI-Verantwortlichen benennen", "Kleines Pilotprojekt mit messbarem Ziel starten"] },
+  { min: 2.6, max: 3.4, name: "Stufe 3: Pilotierung", untertitel: "Strukturierter Einstieg", klasse: "stufe3", bar: "bar3",
+    beschreibung: "Strukturierte Pilotprojekte laufen. Jetzt ist der richtige Moment, Ergebnisse zu bewerten und den Skalierungspfad zu definieren.",
+    empfehlungen: ["Laufende Piloten evaluieren und Business Case berechnen", "Skalierungspfad für erfolgreiche Piloten definieren", "ML-Infrastruktur ausbauen", "KI-Team aufbauen oder erweitern", "KI-Governance-Framework einführen"] },
+  { min: 3.4, max: 4.2, name: "Stufe 4: Integration", untertitel: "Skalierung & Standardisierung", klasse: "stufe4", bar: "bar4",
+    beschreibung: "KI ist produktiv in Kernprozesse integriert. Fokus liegt jetzt auf Skalierung, Standardisierung und Aufbau eines Center of Excellence.",
+    empfehlungen: ["Center of Excellence (CoE) für KI aufbauen", "MLOps-Prozesse standardisieren", "KI-Governance und Compliance verankern", "Unternehmensweites KI-Literacy-Programm ausrollen", "Externe Partnerschaften für Innovation aufbauen"] },
+  { min: 4.2, max: 5.0, name: "Stufe 5: Transformation", untertitel: "KI-Leader", klasse: "stufe5", bar: "bar5",
+    beschreibung: "KI ist strategischer Wettbewerbsvorteil. Ihr Unternehmen gehört zu den KI-Vorreitern — fokussieren Sie auf kontinuierliche Innovation und externe Wirkung.",
+    empfehlungen: ["Innovationsführerschaft aktiv ausbauen und kommunizieren", "KI-basierte Geschäftsmodell-Innovationen entwickeln", "Externe KI-Ökosystem-Partnerschaften intensivieren", "KI-Ethik und Responsible AI als Markenvorteil nutzen", "Branchenstandards mitgestalten und Thought Leadership aufbauen"] }
+];
+
+const gewichtungen = { "Daten": 0.25, "Infrastruktur": 0.20, "Kompetenz": 0.20, "Prozesse": 0.20, "Führung": 0.15 };
+let antworten = new Array(fragen.length).fill(null);
+let aktuelleFrageIndex = 0;
+
+function startCheck() {
+  document.getElementById('welcome').style.display = 'none';
+  document.getElementById('quiz').style.display = 'block';
+  renderFragenkarten();
+  zeigeFrageKarte(0);
+}
+
+function renderFragenkarten() {
+  const container = document.getElementById('questionCards');
+  container.innerHTML = fragen.map((f, i) => `
+    <div class="question-card" id="card_${i}">
+      <span class="dimension-badge">${f.dim}</span>
+      <div class="question-text">Frage ${i+1}: ${f.frage}</div>
+      <div class="options">${f.optionen.map((o, j) => `
+        <div class="option" id="opt_${i}_${j}" onclick="waehleAntwort(${i}, ${j}, ${o.score})">
+          <div class="option-score">${o.score}</div>
+          <div class="option-text">${o.text}</div>
+        </div>
+      `).join('')}</div>
+      <div class="nav-buttons">
+        ${i > 0 ? `<button class="btn btn-back" onclick="zeigeFrageKarte(${i-1})">← Zurück</button>` : '<div></div>'}
+        <button class="btn btn-next" id="next_${i}" onclick="${i < fragen.length-1 ? 'zeigeFrageKarte(' + (i+1) + ')' : 'zeigeErgebnis()'}" disabled>${i < fragen.length-1 ? 'Weiter →' : 'Auswertung anzeigen ✓'}</button>
+      </div>
+    </div>
+  `).join('');
+}
+
+function zeigeFrageKarte(index) {
+  document.querySelectorAll('.question-card').forEach(c => c.classList.remove('active'));
+  document.getElementById('card_' + index).classList.add('active');
+  aktuelleFrageIndex = index;
+  const fill = ((index) / fragen.length) * 100;
+  document.getElementById('progressFill').style.width = fill + '%';
+  document.getElementById('progressLabel').textContent = 'Frage ' + (index+1) + ' von ' + fragen.length;
+  if (antworten[index] !== null) updateNextButton(index);
+}
+
+function waehleAntwort(frageIdx, optIdx, score) {
+  antworten[frageIdx] = score;
+  document.querySelectorAll('[id^="opt_' + frageIdx + '_"]').forEach(el => el.classList.remove('selected'));
+  document.getElementById('opt_' + frageIdx + '_' + optIdx).classList.add('selected');
+  updateNextButton(frageIdx);
+}
+
+function updateNextButton(frageIdx) {
+  const btn = document.getElementById('next_' + frageIdx);
+  if (btn) btn.disabled = antworten[frageIdx] === null;
+}
+
+function berechneScores() {
+  const dimScores = {};
+  const dimCount = {};
+  fragen.forEach((f, i) => {
+    if (!dimScores[f.dimKurz]) { dimScores[f.dimKurz] = 0; dimCount[f.dimKurz] = 0; }
+    if (antworten[i]) { dimScores[f.dimKurz] += antworten[i]; dimCount[f.dimKurz]++; }
+  });
+  Object.keys(dimScores).forEach(k => { if (dimCount[k] > 0) dimScores[k] /= dimCount[k]; });
+  let gesamt = 0;
+  let totalGew = 0;
+  Object.keys(dimScores).forEach(k => { gesamt += dimScores[k] * (gewichtungen[k] || 0.2); totalGew += (gewichtungen[k] || 0.2); });
+  return { dimScores, gesamt: gesamt / totalGew * (Object.keys(dimScores).length / 5 || 1) + (gesamt > 0 ? 0 : 0) };
+}
+
+function getStufe(score) {
+  return stufen.find(s => score >= s.min && score <= s.max) || stufen[stufen.length - 1];
+}
+
+function zeigeErgebnis() {
+  document.getElementById('quiz').style.display = 'none';
+  const { dimScores, gesamt } = berechneScores();
+  const gesamtScore = Object.values(dimScores).reduce((a, b) => a + b, 0) / Object.keys(dimScores).length;
+  const stufe = getStufe(gesamtScore);
+  const dimNamen = { "Daten": "Datenverfügbarkeit & -qualität", "Infrastruktur": "Technische Infrastruktur", "Kompetenz": "KI-Kompetenz (intern)", "Prozesse": "Prozessintegration", "Führung": "Führung & Kultur" };
+  const dimFarben = { "Daten": "bar4", "Infrastruktur": "bar3", "Kompetenz": "bar5", "Prozesse": "bar2", "Führung": "bar1" };
+  const result = document.getElementById('result');
+  result.innerHTML = `
+    <div class="result-header">
+      <div class="stufe-badge ${stufe.klasse}">${stufe.name}</div>
+      <div class="gesamtscore" style="color: var(--c, #2d3748)">${gesamtScore.toFixed(1)}<span style="font-size:0.45em; font-weight:400"> / 5.0</span></div>
+      <div class="score-label">Ihr KI-Reifegrad-Score</div>
+      <div style="margin-top:12px; font-size:1em; color:#4a5568; max-width:520px; margin-left:auto; margin-right:auto; line-height:1.6">${stufe.beschreibung}</div>
+    </div>
+    <div class="dimensionen">
+      <h3>Ergebnis nach Dimension:</h3>
+      ${Object.entries(dimScores).map(([k, v]) => `
+        <div class="dim-row">
+          <div class="dim-label">
+            <span class="dim-name">${dimNamen[k] || k}</span>
+            <span class="dim-score">${v.toFixed(1)} / 5.0</span>
+          </div>
+          <div class="dim-bar"><div class="dim-fill ${dimFarben[k] || 'bar3'}" style="width:${(v/5)*100}%"></div></div>
+        </div>
+      `).join('')}
+    </div>
+    <div class="empfehlungen">
+      <h3>💡 Empfohlene nächste Schritte:</h3>
+      <ul>${stufe.empfehlungen.map(e => `<li>${e}</li>`).join('')}</ul>
+    </div>
+    <button class="btn btn-restart" onclick="neustarten()">🔄 Neu starten</button>
+  `;
+  result.classList.add('show');
+  window.scrollTo({ top: 0, behavior: 'smooth' });
+}
+
+function neustarten() {
+  antworten = new Array(fragen.length).fill(null);
+  document.getElementById('result').classList.remove('show');
+  document.getElementById('result').innerHTML = '';
+  document.getElementById('welcome').style.display = 'block';
+  window.scrollTo({ top: 0, behavior: 'smooth' });
+}
+</script>
+</body>
+</html>
