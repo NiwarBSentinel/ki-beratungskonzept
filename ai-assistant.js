@@ -6,7 +6,7 @@
 (function () {
 
    // ── Konfiguration ─────────────────────────────────────────
-   const OPENAI_API_KEY = 'YOUR_OPENAI_API_KEY_HERE'; // <-- hier eintragen
+   const OPENAI_API_KEY = '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'; // <-- hier eintragen
    const MODEL = 'gpt-4o-mini';
     // ──────────────────────────────────────────────────────────
 
