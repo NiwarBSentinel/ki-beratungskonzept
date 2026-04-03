@@ -1,0 +1,158 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>HTML Live Editor</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      font-family: 'Segoe UI', sans-serif;
+      background: #1e1e2e;
+      color: #cdd6f4;
+      height: 100vh;
+      display: flex;
+      flex-direction: column;
+    }
+
+    header {
+      background: #181825;
+      padding: 12px 20px;
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      border-bottom: 2px solid #89b4fa;
+    }
+
+    header h1 {
+      font-size: 1.2rem;
+      color: #89b4fa;
+    }
+
+    .btn {
+      padding: 6px 16px;
+      border: none;
+      border-radius: 6px;
+      cursor: pointer;
+      font-size: 0.85rem;
+      font-weight: 600;
+      transition: opacity 0.2s;
+    }
+    .btn:hover { opacity: 0.85; }
+    .btn-run { background: #a6e3a1; color: #1e1e2e; }
+    .btn-clear { background: #f38ba8; color: #1e1e2e; }
+    .btn-copy { background: #89b4fa; color: #1e1e2e; }
+
+    .workspace {
+      display: flex;
+      flex: 1;
+      overflow: hidden;
+    }
+
+    .editor-panel, .preview-panel {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+    }
+
+    .panel-label {
+      background: #313244;
+      padding: 6px 16px;
+      font-size: 0.75rem;
+      text-transform: uppercase;
+      letter-spacing: 1px;
+      color: #bac2de;
+    }
+
+    textarea#code {
+      flex: 1;
+      background: #1e1e2e;
+      color: #cdd6f4;
+      border: none;
+      border-right: 2px solid #313244;
+      padding: 16px;
+      font-family: 'Courier New', monospace;
+      font-size: 0.9rem;
+      line-height: 1.6;
+      resize: none;
+      outline: none;
+    }
+
+    textarea#code::placeholder { color: #585b70; }
+
+    iframe#preview {
+      flex: 1;
+      border: none;
+      background: #fff;
+    }
+
+    .status-bar {
+      background: #181825;
+      padding: 4px 16px;
+      font-size: 0.75rem;
+      color: #6c7086;
+      border-top: 1px solid #313244;
+    }
+  </style>
+</head>
+<body>
+
+<header>
+  <h1>&#60;/&#62; HTML Live Editor</h1>
+  <button class="btn btn-run" onclick="runCode()">&#9654; Ausführen</button>
+  <button class="btn btn-clear" onclick="clearAll()">&#10006; Leeren</button>
+  <button class="btn btn-copy" onclick="copyCode()">&#128203; Kopieren</button>
+</header>
+
+<div class="workspace">
+  <div class="editor-panel">
+    <div class="panel-label">&#9998; HTML Code eingeben</div>
+    <textarea id="code" placeholder="Gib deinen HTML-Code hier ein...&#10;&#10;Beispiel:&#10;&lt;h1&gt;Hallo Welt!&lt;/h1&gt;&#10;&lt;p&gt;Das ist mein erster HTML-Code.&lt;/p&gt;" oninput="autoRun()"></textarea>
+  </div>
+  <div class="preview-panel">
+    <div class="panel-label">&#128065; Vorschau</div>
+    <iframe id="preview"></iframe>
+  </div>
+</div>
+
+<div class="status-bar" id="status">Bereit – gib HTML-Code ein und klicke auf "Ausführen" oder tippe für Auto-Vorschau.</div>
+
+<script>
+  let autoRunTimer = null;
+
+  function runCode() {
+    const code = document.getElementById('code').value;
+    const frame = document.getElementById('preview');
+    const doc = frame.contentDocument || frame.contentWindow.document;
+    doc.open();
+    doc.write(code);
+    doc.close();
+    document.getElementById('status').textContent = 'Vorschau aktualisiert – ' + new Date().toLocaleTimeString();
+  }
+
+  function autoRun() {
+    clearTimeout(autoRunTimer);
+    autoRunTimer = setTimeout(runCode, 600);
+  }
+
+  function clearAll() {
+    document.getElementById('code').value = '';
+    const frame = document.getElementById('preview');
+    const doc = frame.contentDocument || frame.contentWindow.document;
+    doc.open(); doc.write(''); doc.close();
+    document.getElementById('status').textContent = 'Editor geleert.';
+  }
+
+  function copyCode() {
+    const code = document.getElementById('code').value;
+    if (!code) { alert('Kein Code zum Kopieren!'); return; }
+    navigator.clipboard.writeText(code).then(() => {
+      document.getElementById('status').textContent = 'Code in die Zwischenablage kopiert!';
+    });
+  }
+</script>
+
+</body>
+</html>
